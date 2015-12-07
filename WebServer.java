@@ -52,6 +52,8 @@ class HTTPRequestHandler extends Thread{
 		PrintStream output = null;
 		int method = 0;
 		String filename = null;
+		String file_name = "default";
+		String[] parameters = new String[]{};
 		
 		try{
 			// Open socket connections
@@ -94,7 +96,7 @@ class HTTPRequestHandler extends Thread{
 			}
 
 			//Storage for REQUEST_PARAMETERS
-			String[] parameters = params.equals("")?new String[]{}:params.split("&");
+			parameters = params.equals("")?new String[]{}:params.split("&");
 
 			//Process filename
 			//Append trailing / with index.html
@@ -128,7 +130,7 @@ class HTTPRequestHandler extends Thread{
         	InputStream f=new FileInputStream(filename);
         	f.close();
 
-        	String file_name = new File(filename).getName(); 
+        	file_name = new File(filename).getName(); 
         	// copy this file to server directory
         	Files.copy(new File(filename).toPath(),
         		new File(file_name).toPath(),
@@ -144,7 +146,30 @@ class HTTPRequestHandler extends Thread{
 			output.print("<html>"+"\r\n");
 			output.print("<head><title>Mini HTTP Web Server</title></head>"+"\r\n");
 			output.print("<body>"+"\r\n");
-			output.print("<p>"+filename+" saved to server directory!</p>");
+			output.print("<p>"+filename+" was found and saved to server directory!</p>");
+
+		}catch(FileNotFoundException fnfe){
+			System.out.println("Requested file not found!");
+			output.print(constructHTTPHeader(404)+
+				"Content-type: text/html\r\n\r\n");
+			//send response body
+        	output.print("<!DOCTYPE html>"+"\r\n");
+			output.print("<html>"+"\r\n");
+			output.print("<head><title>Mini HTTP Web Server</title></head>"+"\r\n");
+			output.print("<body>"+"\r\n");
+			output.print("<p>"+filename+" was not found!</p>");
+          	try{
+          	PrintWriter out = new PrintWriter(filename);
+          	out.println("AUTO GENERATED FILE");
+          	out.close();
+          	output.print("<p>"+filename+" generated on server directory!</p>");
+          	}catch(FileNotFoundException fnfe2){
+          		
+          	}
+		}catch(IOException ioe){
+			System.out.println("Error: "+ioe.getMessage());
+		}finally{
+			//display the request parameters
 			output.print("<p> "+ ((method==1)?"GET":"POST") +" Request Parameters </p>"+"\r\n");
 			output.print("<table border ='1'>"+"\r\n");
 			output.print("<tr>"+"\r\n");
@@ -153,7 +178,6 @@ class HTTPRequestHandler extends Thread{
 			output.print("</tr>"+"\r\n");
 			
 			//display request parameters
-			System.out.println(parameters.length+" parameters");
 			if(parameters.length != 0){
 				for(int i=0; i<parameters.length; i++){
 					String[] tokens = parameters[i].split("=");
@@ -174,15 +198,6 @@ class HTTPRequestHandler extends Thread{
 			output.print("</html>"+"\r\n");
 
 			output.close();
-
-		}catch(FileNotFoundException fnfe){
-			System.out.println(fnfe.getMessage());
-			output.print(constructHTTPHeader(404)+
-				"Content-type: text/html\r\n\r\n"+
-          		"<html><head></head><body>"+filename+" not found</body></html>\n");
-			output.close();
-		}catch(IOException ioe){
-			System.out.println("Error: "+ioe.getMessage());
 		}
 	}
 	static final String HTTP_VERSION = "HTTP/1.1";
